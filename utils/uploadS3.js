@@ -4,6 +4,8 @@ const mime = require('mime-types');
 const { isImage } = require('./fileExtension');
 const axios = require('axios');
 const Record = require('../models/Record');
+const sharp = require('sharp');
+sharp.cache(false);
 
 exports.uploadS3 = async function (req, res, next) {
 	if (req.files) {
@@ -43,11 +45,13 @@ exports.uploadS3 = async function (req, res, next) {
 			let otsuPerimeter = [];
 
 			req.files.forEach(async (file) => {
+				await resizeFile(file.path);
+
 				await uploadFile(file.filename, file.path);
 				URLs.push(process.env.CLOUDFRONT_URL + file.filename);
 				let canny = await axios({
 					method: 'post',
-					url: 'http://127.0.0.1:4000/canny',
+					url: 'http://127.0.0.1:5000/canny',
 					data: {
 						url: process.env.CLOUDFRONT_URL + file.filename, // This is the body part
 						filename: file.filename,
@@ -58,7 +62,7 @@ exports.uploadS3 = async function (req, res, next) {
 				cannyPerimeter.push(canny.data.perimeter);
 				let laplacian = await axios({
 					method: 'post',
-					url: 'http://127.0.0.1:4000/laplacian',
+					url: 'http://127.0.0.1:5000/laplacian',
 					data: {
 						url: process.env.CLOUDFRONT_URL + file.filename, // This is the body part
 						filename: file.filename,
@@ -69,7 +73,7 @@ exports.uploadS3 = async function (req, res, next) {
 				laplacianPerimeter.push(laplacian.data.perimeter);
 				let sobelX = await axios({
 					method: 'post',
-					url: 'http://127.0.0.1:4000/sobelx',
+					url: 'http://127.0.0.1:5000/sobelx',
 					data: {
 						url: process.env.CLOUDFRONT_URL + file.filename, // This is the body part
 						filename: file.filename,
@@ -80,7 +84,7 @@ exports.uploadS3 = async function (req, res, next) {
 				sobelXPerimeter.push(sobelX.data.perimeter);
 				let sobelY = await axios({
 					method: 'post',
-					url: 'http://127.0.0.1:4000/sobely',
+					url: 'http://127.0.0.1:5000/sobely',
 					data: {
 						url: process.env.CLOUDFRONT_URL + file.filename, // This is the body part
 						filename: file.filename,
@@ -92,7 +96,7 @@ exports.uploadS3 = async function (req, res, next) {
 
 				let otsu = await axios({
 					method: 'post',
-					url: 'http://127.0.0.1:4000/otsu',
+					url: 'http://127.0.0.1:5000/otsu',
 					data: {
 						url: process.env.CLOUDFRONT_URL + file.filename, // This is the body part
 						filename: file.filename,
@@ -180,4 +184,14 @@ async function uploadFile(filename, fileDirectoryPath) {
 			);
 		});
 	});
+}
+
+async function resizeFile(path) {
+	let buffer = await sharp(path)
+		.resize(200, 200, {
+			fit: sharp.fit.inside,
+			withoutEnlargement: true,
+		})
+		.toBuffer();
+	return sharp(buffer).toFile(path);
 }
