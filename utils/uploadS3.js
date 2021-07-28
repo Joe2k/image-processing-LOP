@@ -51,7 +51,29 @@ exports.uploadS3 = async function (req, res, next) {
 				URLs.push(process.env.CLOUDFRONT_URL + file.filename);
 				let canny = await axios({
 					method: 'post',
-					url: 'http://127.0.0.1:4000/canny',
+					url: 'http://127.0.0.1:4000/canny1',
+					data: {
+						url: process.env.CLOUDFRONT_URL + file.filename, // This is the body part
+						filename: file.filename,
+					},
+				});
+				cannyURLs.push(canny.data.url);
+				cannyArea.push(canny.data.area);
+				cannyPerimeter.push(canny.data.perimeter);
+				canny = await axios({
+					method: 'post',
+					url: 'http://127.0.0.1:4000/canny2',
+					data: {
+						url: process.env.CLOUDFRONT_URL + file.filename, // This is the body part
+						filename: file.filename,
+					},
+				});
+				cannyURLs.push(canny.data.url);
+				cannyArea.push(canny.data.area);
+				cannyPerimeter.push(canny.data.perimeter);
+				canny = await axios({
+					method: 'post',
+					url: 'http://127.0.0.1:4000/canny3',
 					data: {
 						url: process.env.CLOUDFRONT_URL + file.filename, // This is the body part
 						filename: file.filename,
@@ -108,7 +130,7 @@ exports.uploadS3 = async function (req, res, next) {
 
 				fs.unlinkSync(file.path);
 				if (
-					cannyURLs.length === req.files.length &&
+					cannyURLs.length === 3 &&
 					laplacianURLs.length === req.files.length &&
 					sobelXURLs.length === req.files.length &&
 					sobelYURLs.length === req.files.length &&
@@ -116,13 +138,19 @@ exports.uploadS3 = async function (req, res, next) {
 				) {
 					const record = await Record.create({
 						imageUrl: URLs[0],
-						cannyUrl: cannyURLs[0],
+						cannyUrl1: cannyURLs[0],
+						cannyUrl2: cannyURLs[1],
+						cannyUrl3: cannyURLs[2],
 						sobelXUrl: sobelXURLs[0],
 						sobelYUrl: sobelYURLs[0],
 						laplacianUrl: laplacianURLs[0],
 						otsuUrl: otsuURLs[0],
-						cannyArea: cannyArea[0],
-						cannyPerimeter: cannyPerimeter[0],
+						cannyArea1: cannyArea[0],
+						cannyPerimeter1: cannyPerimeter[0],
+						cannyArea2: cannyArea[1],
+						cannyPerimeter2: cannyPerimeter[1],
+						cannyArea3: cannyArea[2],
+						cannyPerimeter3: cannyPerimeter[2],
 						laplacianArea: laplacianArea[0],
 						laplacianPerimeter: laplacianPerimeter[0],
 						sobelXArea: sobelXArea[0],
